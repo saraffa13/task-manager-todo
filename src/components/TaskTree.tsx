@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import type { TaskDTO, TaskNode } from "@/types";
+import type { Attachment, TaskDTO, TaskNode } from "@/types";
 import TaskItem from "./TaskItem";
 import AddTaskInput from "./AddTaskInput";
 
@@ -67,13 +67,38 @@ export default function TaskTree({ workspaceId }: { workspaceId: string }) {
     [tree, maxDepth]
   );
 
-  async function addTask(text: string, parentId: string | null) {
+  async function addTask(
+    text: string,
+    parentId: string | null,
+    attachments: Attachment[] = []
+  ) {
     const res = await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, workspaceId, parentId }),
+      body: JSON.stringify({ text, workspaceId, parentId, attachments }),
     });
-    if (res.ok) await load();
+    if (!res.ok) {
+      const msg = await res.text().catch(() => "");
+      console.error("Failed to create task", res.status, msg);
+      alert(`Failed to create task (${res.status}). ${msg}`);
+      return;
+    }
+    await load();
+  }
+
+  async function setAttachments(id: string, attachments: Attachment[]) {
+    const res = await fetch(`/api/tasks/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ attachments }),
+    });
+    if (!res.ok) {
+      const msg = await res.text().catch(() => "");
+      console.error("Failed to update attachments", res.status, msg);
+      alert(`Failed to save attachments (${res.status}). ${msg}`);
+      return;
+    }
+    await load();
   }
 
   async function toggle(id: string) {
@@ -140,13 +165,14 @@ export default function TaskTree({ workspaceId }: { workspaceId: string }) {
             onToggle={toggle}
             onEdit={edit}
             onDelete={remove}
-            onAddChild={(pid, text) => addTask(text, pid)}
+            onAddChild={(pid, text, atts) => addTask(text, pid, atts)}
             onSetDeadline={setDeadline}
+            onSetAttachments={setAttachments}
           />
         ))
       )}
       <div className="mt-4">
-        <AddTaskInput onAdd={(text) => addTask(text, null)} />
+        <AddTaskInput onAdd={(text, atts) => addTask(text, null, atts)} />
       </div>
     </div>
   );

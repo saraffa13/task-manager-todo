@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
-import type { TaskNode } from "@/types";
+import type { Attachment, TaskNode } from "@/types";
 import AddTaskInput from "./AddTaskInput";
+import AttachmentEditor from "./AttachmentEditor";
 
 interface Props {
   task: TaskNode;
@@ -10,8 +11,9 @@ interface Props {
   onToggle: (id: string) => void;
   onEdit: (id: string, text: string) => void;
   onDelete: (id: string) => void;
-  onAddChild: (parentId: string, text: string) => void;
+  onAddChild: (parentId: string, text: string, attachments: Attachment[]) => void;
   onSetDeadline: (id: string, deadline: string | null) => void;
+  onSetAttachments: (id: string, attachments: Attachment[]) => void;
 }
 
 function fmtDate(iso: string | null) {
@@ -37,14 +39,17 @@ export default function TaskItem({
   onDelete,
   onAddChild,
   onSetDeadline,
+  onSetAttachments,
 }: Props) {
   const [expanded, setExpanded] = useState(true);
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(task.text);
   const [showAddChild, setShowAddChild] = useState(false);
   const [editingDate, setEditingDate] = useState(false);
+  const [showAttachments, setShowAttachments] = useState(false);
   const hasChildren = task.children.length > 0;
   const overdue = isOverdue(task.deadline, task.completed);
+  const attachmentCount = task.attachments?.length ?? 0;
 
   function commitEdit() {
     const v = text.trim();
@@ -159,6 +164,18 @@ export default function TaskItem({
         )}
 
         <button
+          onClick={() => setShowAttachments((v) => !v)}
+          className={`${
+            attachmentCount > 0
+              ? "opacity-100"
+              : "opacity-0 max-sm:opacity-100 group-hover:opacity-100 focus:opacity-100"
+          } text-[11px] text-gray-500 hover:text-accent px-1.5 h-8 min-w-[2rem] flex items-center justify-center hover:bg-accent/10 rounded transition-all`}
+          aria-label="Attachments"
+          title={attachmentCount > 0 ? `${attachmentCount} attachment(s)` : "Add attachment"}
+        >
+          {attachmentCount > 0 ? `@ ${attachmentCount}` : "@"}
+        </button>
+        <button
           onClick={() => setShowAddChild((v) => !v)}
           className="opacity-0 max-sm:opacity-100 group-hover:opacity-100 focus:opacity-100 text-accent text-lg w-8 h-8 flex items-center justify-center hover:bg-accent/10 rounded transition-all"
           aria-label="Add sub-task"
@@ -178,12 +195,21 @@ export default function TaskItem({
         </button>
       </div>
 
+      {showAttachments && (
+        <div style={{ marginLeft: 32 }} className="my-1 p-2 bg-gray-50 border border-gray-200 rounded-lg">
+          <AttachmentEditor
+            attachments={task.attachments || []}
+            onChange={(next) => onSetAttachments(task._id, next)}
+          />
+        </div>
+      )}
+
       {showAddChild && (
         <div style={{ marginLeft: 32 }} className="my-1">
           <AddTaskInput
             placeholder="New sub-task…"
-            onAdd={(t) => {
-              onAddChild(task._id, t);
+            onAdd={(t, atts) => {
+              onAddChild(task._id, t, atts);
               setShowAddChild(false);
               setExpanded(true);
             }}
@@ -204,6 +230,7 @@ export default function TaskItem({
               onDelete={onDelete}
               onAddChild={onAddChild}
               onSetDeadline={onSetDeadline}
+              onSetAttachments={onSetAttachments}
             />
           ))}
         </div>

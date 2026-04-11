@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { dbConnect } from "@/lib/db";
 import Task from "@/lib/models/Task";
 import { requireUserId } from "@/lib/session";
+import { sanitizeAttachments } from "@/lib/attachments";
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const userId = await requireUserId();
@@ -11,6 +12,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (typeof body.text === "string" && body.text.trim()) update.text = body.text.trim();
   if (typeof body.completed === "boolean") update.completed = body.completed;
   if ("deadline" in body) update.deadline = body.deadline ? new Date(body.deadline) : null;
+  if ("attachments" in body) update.attachments = sanitizeAttachments(body.attachments);
   await dbConnect();
   const t = await Task.findOneAndUpdate({ _id: params.id, userId }, update, { new: true });
   if (!t) return NextResponse.json({ error: "Not found" }, { status: 404 });

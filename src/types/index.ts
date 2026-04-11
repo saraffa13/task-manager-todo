@@ -4,6 +4,17 @@ export interface Workspace {
   order: number;
 }
 
+export type AttachmentType = "link" | "pdf" | "note";
+
+export interface Attachment {
+  id: string;
+  type: AttachmentType;
+  name: string;
+  url?: string;
+  data?: string;
+  content?: string;
+}
+
 export interface TaskDTO {
   _id: string;
   text: string;
@@ -12,6 +23,7 @@ export interface TaskDTO {
   parentId: string | null;
   order: number;
   deadline: string | null;
+  attachments: Attachment[];
   workspaceName?: string;
 }
 

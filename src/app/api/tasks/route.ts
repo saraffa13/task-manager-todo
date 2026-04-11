@@ -3,6 +3,7 @@ import { dbConnect } from "@/lib/db";
 import Task from "@/lib/models/Task";
 import Workspace from "@/lib/models/Workspace";
 import { requireUserId } from "@/lib/session";
+import { sanitizeAttachments, serializeAttachment } from "@/lib/attachments";
 
 export async function GET(req: Request) {
   const userId = await requireUserId();
@@ -22,6 +23,7 @@ export async function GET(req: Request) {
       parentId: t.parentId ? String(t.parentId) : null,
       order: t.order,
       deadline: t.deadline ? new Date(t.deadline).toISOString() : null,
+      attachments: (t.attachments || []).map(serializeAttachment),
     }))
   );
 }
@@ -29,13 +31,19 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const userId = await requireUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { text, workspaceId, parentId, deadline } = await req.json();
+  const { text, workspaceId, parentId, deadline, attachments } = await req.json();
   if (!text?.trim() || !workspaceId)
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   await dbConnect();
   const ws = await Workspace.findOne({ _id: workspaceId, userId });
   if (!ws) return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
   const count = await Task.countDocuments({ userId, workspaceId, parentId: parentId || null });
+  const cleanAttachments = sanitizeAttachments(attachments);
+  if (Array.isArray(attachments) && attachments.length !== cleanAttachments.length) {
+    console.warn(
+      `[tasks POST] dropped ${attachments.length - cleanAttachments.length} invalid attachment(s)`
+    );
+  }
   const t = await Task.create({
     text: text.trim(),
     workspaceId,
@@ -43,6 +51,7 @@ export async function POST(req: Request) {
     userId,
     order: count,
     deadline: deadline ? new Date(deadline) : null,
+    attachments: cleanAttachments,
   });
   if (parentId) await uncompleteAncestors(parentId, userId);
   return NextResponse.json({
@@ -53,6 +62,7 @@ export async function POST(req: Request) {
     parentId: t.parentId ? String(t.parentId) : null,
     order: t.order,
     deadline: t.deadline ? t.deadline.toISOString() : null,
+    attachments: (t.attachments || []).map(serializeAttachment),
   });
 }
 
