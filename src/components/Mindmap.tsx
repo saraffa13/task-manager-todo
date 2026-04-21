@@ -56,8 +56,8 @@ export default function Mindmap({ root, onChange, readOnly = false }: Props) {
   }
 
   return (
-    <div className="overflow-x-auto overflow-y-auto p-4 min-h-[60vh] bg-gradient-to-br from-slate-50 to-white rounded-xl border border-gray-200">
-      <div className="inline-block">
+    <div className="overflow-x-auto overflow-y-auto p-2 sm:p-4 min-h-[60vh] bg-gradient-to-br from-slate-50 to-white rounded-xl border border-gray-200 -mx-3 sm:mx-0">
+      <div className="inline-block pr-4">
         <NodeView
           node={root}
           isRoot
@@ -159,7 +159,7 @@ function NodeCard({ node, isRoot, readOnly, onUpdate, onDelete, onAddChild }: Ca
 
   const descendantCount = countDescendants(node);
 
-  const baseCls = `group relative rounded-xl px-3 py-2 shadow-sm border transition-all min-w-[10rem] max-w-[16rem] flex-shrink-0 ${
+  const baseCls = `group relative rounded-xl px-3 py-2 shadow-sm border transition-all min-w-[8rem] sm:min-w-[10rem] max-w-[14rem] sm:max-w-[16rem] flex-shrink-0 ${
     isRoot
       ? "bg-nav text-white border-nav"
       : "bg-white border-gray-200 hover:border-accent"
@@ -235,7 +235,7 @@ function NodeCard({ node, isRoot, readOnly, onUpdate, onDelete, onAddChild }: Ca
         ) : null}
       </div>
       {!readOnly && (
-        <div className="absolute -top-2 -right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute -top-2 -right-2 flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity">
           <button
             onClick={() => onAddChild(node.id)}
             className="w-6 h-6 rounded-full bg-accent text-nav text-sm font-bold shadow hover:scale-110 transition-transform"

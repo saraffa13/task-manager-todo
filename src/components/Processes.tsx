@@ -11,6 +11,7 @@ export default function Processes({ userEmail }: { userEmail: string }) {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [importing, setImporting] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function load() {
@@ -127,8 +128,19 @@ export default function Processes({ userEmail }: { userEmail: string }) {
   return (
     <div className="h-screen flex flex-col">
       <Header email={userEmail} />
-      <div className="flex-1 flex overflow-hidden">
-        <aside className="w-64 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Mobile drawer backdrop */}
+        {sidebarOpen && (
+          <div
+            className="md:hidden fixed inset-0 top-14 z-30 bg-black/40"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+        <aside
+          className={`${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          } md:translate-x-0 fixed md:static top-14 bottom-0 left-0 z-40 md:z-auto w-64 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto transition-transform duration-200 md:transition-none`}
+        >
           <div className="p-4">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-xs font-bold uppercase text-gray-400 tracking-wider">
@@ -200,7 +212,10 @@ export default function Processes({ userEmail }: { userEmail: string }) {
                 {processes.map((p) => (
                   <li key={p._id}>
                     <button
-                      onClick={() => setActiveId(p._id)}
+                      onClick={() => {
+                        setActiveId(p._id);
+                        setSidebarOpen(false);
+                      }}
                       className={`w-full text-left text-sm px-2 py-1.5 rounded truncate transition-all ${
                         activeId === p._id
                           ? "bg-accent/15 text-teal-700 font-semibold"
@@ -217,8 +232,24 @@ export default function Processes({ userEmail }: { userEmail: string }) {
           </div>
         </aside>
 
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-6xl mx-auto p-4 md:p-6">
+        <main className="flex-1 overflow-y-auto min-w-0">
+          <div className="max-w-6xl mx-auto p-3 sm:p-4 md:p-6">
+            <div className="md:hidden mb-3 flex items-center gap-2">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="text-sm bg-nav text-white px-3 py-1.5 rounded-lg flex items-center gap-1.5"
+                aria-label="Show processes list"
+              >
+                <span aria-hidden>☰</span>
+                <span>Processes</span>
+                {processes.length > 0 && (
+                  <span className="text-[10px] bg-white/20 rounded px-1 py-0.5">
+                    {processes.length}
+                  </span>
+                )}
+              </button>
+            </div>
+
             {!active ? (
               <div className="text-center py-20 text-gray-400">
                 <p className="text-xl mb-2">Process Mindmaps</p>
@@ -228,28 +259,32 @@ export default function Processes({ userEmail }: { userEmail: string }) {
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between gap-3 mb-4">
-                  <ProcessNameHeader
-                    name={active.name}
-                    onRename={(n) => renameProcess(active._id, n)}
-                  />
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <div className="flex-1 min-w-0">
+                    <ProcessNameHeader
+                      name={active.name}
+                      onRename={(n) => renameProcess(active._id, n)}
+                    />
+                  </div>
                   <button
                     onClick={() => exportProcess(active)}
-                    className="text-xs text-gray-500 hover:text-accent border border-gray-200 hover:border-accent rounded px-2 py-1"
+                    className="text-xs text-gray-500 hover:text-accent border border-gray-200 hover:border-accent rounded px-2 py-1 whitespace-nowrap"
                     title="Copy JSON to clipboard"
                   >
                     Export JSON
                   </button>
                   <button
                     onClick={() => deleteProcess(active._id)}
-                    className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-300 rounded px-2 py-1"
+                    className="text-xs text-gray-400 hover:text-red-500 border border-gray-200 hover:border-red-300 rounded px-2 py-1 whitespace-nowrap"
                     title="Delete process"
                   >
                     Delete
                   </button>
                 </div>
                 <p className="text-xs text-gray-400 mb-3">
-                  Hover a step to add a sub-step or delete. Click any step to rename.
+                  <span className="hidden md:inline">Hover a step to add a sub-step or delete.</span>
+                  <span className="md:hidden">Tap a step for actions.</span>{" "}
+                  Click any step to rename.
                 </p>
                 <Mindmap root={active.root} onChange={(r) => updateTree(active._id, r)} />
               </>
