@@ -31,6 +31,20 @@ export interface TaskNode extends TaskDTO {
   children: TaskNode[];
 }
 
+export interface ProcessNode {
+  id: string;
+  label: string;
+  detail?: string;
+  children: ProcessNode[];
+}
+
+export interface ProcessDTO {
+  _id: string;
+  name: string;
+  root: ProcessNode;
+  order: number;
+}
+
 declare module "next-auth" {
   interface Session {
     user: { id: string; email: string };

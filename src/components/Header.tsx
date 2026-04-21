@@ -27,6 +27,9 @@ export default function Header({ email }: { email: string }) {
           <Link href="/profile" className={linkCls("/profile")}>
             Profile
           </Link>
+          <Link href="/processes" className={linkCls("/processes")}>
+            Processes
+          </Link>
         </nav>
       </div>
       <div className="flex items-center gap-3">
