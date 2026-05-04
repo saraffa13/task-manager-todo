@@ -24,15 +24,24 @@ export default function Header({ email }: { email: string }) {
           <Link href="/workspaces" className={`${linkCls("/workspaces")} whitespace-nowrap`}>
             Workspaces
           </Link>
-          <Link href="/profile" className={`${linkCls("/profile")} whitespace-nowrap`}>
-            Profile
-          </Link>
           <Link href="/processes" className={`${linkCls("/processes")} whitespace-nowrap`}>
             Processes
+          </Link>
+          <Link href="/habits" className={`${linkCls("/habits")} whitespace-nowrap`}>
+            Habits
+          </Link>
+          <Link href="/loans" className={`${linkCls("/loans")} whitespace-nowrap`}>
+            Loans
+          </Link>
+          <Link href="/pomodoro" className={`${linkCls("/pomodoro")} whitespace-nowrap`}>
+            Pomodoro
           </Link>
         </nav>
       </div>
       <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+        <Link href="/profile" className={`${linkCls("/profile")} whitespace-nowrap`}>
+          Profile
+        </Link>
         <span className="hidden md:inline text-sm text-gray-300 truncate max-w-[180px]">
           {email}
         </span>
