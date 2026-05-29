@@ -45,6 +45,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       update.screenshot = s;
     }
   }
+  if (body.direction === "lent" || body.direction === "borrowed") {
+    update.direction = body.direction;
+  }
   if (body.status === "outstanding" || body.status === "repaid") {
     update.status = body.status;
     update.repaidAt = body.status === "repaid" ? new Date() : null;

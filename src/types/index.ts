@@ -67,9 +67,11 @@ export interface HabitDTO {
 }
 
 export type LoanStatus = "outstanding" | "repaid";
+export type LoanDirection = "lent" | "borrowed";
 
 export interface LoanDTO {
   _id: string;
+  direction: LoanDirection;
   borrower: string;
   amount: number;
   currency: string;

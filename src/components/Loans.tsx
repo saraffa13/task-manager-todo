@@ -1,15 +1,17 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Header from "./Header";
-import type { LoanDTO, LoanStatus } from "@/types";
+import type { LoanDTO, LoanDirection, LoanStatus } from "@/types";
 import { MAX_SCREENSHOT_BYTES, isImageDataUrl } from "@/lib/loans";
 
 type Filter = "all" | "outstanding" | "repaid";
+type DirFilter = "all" | "lent" | "borrowed";
 
 export default function Loans({ userEmail }: { userEmail: string }) {
   const [loans, setLoans] = useState<LoanDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>("outstanding");
+  const [dirFilter, setDirFilter] = useState<DirFilter>("all");
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<LoanDTO | null>(null);
   const [viewing, setViewing] = useState<LoanDTO | null>(null);
@@ -25,16 +27,23 @@ export default function Loans({ userEmail }: { userEmail: string }) {
   }, []);
 
   const filtered = useMemo(() => {
-    if (filter === "all") return loans;
-    return loans.filter((l) => l.status === filter);
-  }, [loans, filter]);
+    return loans.filter((l) => {
+      const dir = (l.direction ?? "lent") as LoanDirection;
+      if (dirFilter !== "all" && dir !== dirFilter) return false;
+      if (filter !== "all" && l.status !== filter) return false;
+      return true;
+    });
+  }, [loans, filter, dirFilter]);
 
   const totals = useMemo(() => {
-    const outstanding = loans
-      .filter((l) => l.status === "outstanding")
-      .reduce((s, l) => s + l.amount, 0);
-    const lent = loans.reduce((s, l) => s + l.amount, 0);
-    return { outstanding, lent, count: loans.length };
+    let owedToMe = 0;
+    let iOwe = 0;
+    for (const l of loans) {
+      if (l.status !== "outstanding") continue;
+      if ((l.direction ?? "lent") === "borrowed") iOwe += l.amount;
+      else owedToMe += l.amount;
+    }
+    return { owedToMe, iOwe, count: loans.length };
   }, [loans]);
 
   async function setStatus(id: string, status: LoanStatus) {
@@ -66,33 +75,48 @@ export default function Loans({ userEmail }: { userEmail: string }) {
       <main className="flex-1 overflow-y-auto">
         <div className="p-3 sm:p-6 max-w-5xl w-full mx-auto">
         <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-          <h2 className="text-xl sm:text-2xl font-bold text-nav">Lending</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-nav">Loans</h2>
           <button
             onClick={() => setCreating(true)}
             className="text-sm bg-accent text-nav font-semibold px-3 py-1.5 rounded-lg hover:opacity-90"
           >
-            + New loan
+            + New entry
           </button>
         </div>
 
         <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
-          <SummaryCard label="Outstanding" value={fmtMoney(totals.outstanding)} accent />
-          <SummaryCard label="Total lent" value={fmtMoney(totals.lent)} />
+          <SummaryCard label="Owed to me" value={fmtMoney(totals.owedToMe)} accent />
+          <SummaryCard label="I owe" value={fmtMoney(totals.iOwe)} danger />
           <SummaryCard label="Records" value={String(totals.count)} />
         </div>
 
-        <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
-          {(["outstanding", "all", "repaid"] as Filter[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`text-xs sm:text-sm px-3 py-1 rounded-md capitalize ${
-                filter === f ? "bg-white shadow-sm text-nav font-semibold" : "text-gray-500"
-              }`}
-            >
-              {f}
-            </button>
-          ))}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
+            {(["outstanding", "all", "repaid"] as Filter[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`text-xs sm:text-sm px-3 py-1 rounded-md capitalize ${
+                  filter === f ? "bg-white shadow-sm text-nav font-semibold" : "text-gray-500"
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
+            {(["all", "lent", "borrowed"] as DirFilter[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setDirFilter(f)}
+                className={`text-xs sm:text-sm px-3 py-1 rounded-md capitalize ${
+                  dirFilter === f ? "bg-white shadow-sm text-nav font-semibold" : "text-gray-500"
+                }`}
+              >
+                {f === "all" ? "all directions" : f}
+              </button>
+            ))}
+          </div>
         </div>
 
         {loading ? (
@@ -151,17 +175,19 @@ function SummaryCard({
   label,
   value,
   accent,
+  danger,
 }: {
   label: string;
   value: string;
   accent?: boolean;
+  danger?: boolean;
 }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4">
       <div className="text-[10px] sm:text-xs uppercase tracking-wide text-gray-400">{label}</div>
       <div
         className={`text-base sm:text-xl font-bold mt-1 break-words ${
-          accent ? "text-accent" : "text-nav"
+          danger ? "text-red-500" : accent ? "text-accent" : "text-nav"
         }`}
       >
         {value}
@@ -186,6 +212,8 @@ function LoanCard({
   onDelete: () => void;
 }) {
   const isRepaid = loan.status === "repaid";
+  const direction: LoanDirection = (loan.direction ?? "lent") as LoanDirection;
+  const isBorrowed = direction === "borrowed";
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-3 sm:p-4 shadow-sm flex gap-3">
       {loan.screenshot ? (
@@ -206,6 +234,9 @@ function LoanCard({
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2 flex-wrap">
           <div className="min-w-0">
+            <div className="text-[10px] uppercase tracking-wide text-gray-400">
+              {isBorrowed ? "Borrowed from" : "Lent to"}
+            </div>
             <div className="font-semibold text-nav break-words">{loan.borrower}</div>
             <div className="text-xs text-gray-500 mt-0.5">
               {fmtDate(loan.lentAt)}
@@ -213,13 +244,19 @@ function LoanCard({
             </div>
           </div>
           <div className="text-right">
-            <div className="font-bold text-nav">{fmtMoney(loan.amount, loan.currency)}</div>
+            <div className={`font-bold ${isBorrowed && !isRepaid ? "text-red-500" : "text-nav"}`}>
+              {isBorrowed ? "-" : ""}{fmtMoney(loan.amount, loan.currency)}
+            </div>
             <span
               className={`inline-block mt-0.5 text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full ${
-                isRepaid ? "bg-gray-100 text-gray-500" : "bg-accent/15 text-accent"
+                isRepaid
+                  ? "bg-gray-100 text-gray-500"
+                  : isBorrowed
+                    ? "bg-red-50 text-red-500"
+                    : "bg-accent/15 text-accent"
               }`}
             >
-              {loan.status}
+              {isBorrowed ? "i owe" : loan.status}
             </span>
           </div>
         </div>
@@ -241,7 +278,7 @@ function LoanCard({
               onClick={onMarkRepaid}
               className="text-xs px-2.5 py-1 rounded bg-accent text-nav font-semibold"
             >
-              Mark repaid
+              {isBorrowed ? "Mark paid back" : "Mark repaid"}
             </button>
           )}
           <button
@@ -272,6 +309,9 @@ function LoanFormModal({
   onSaved: (l: LoanDTO) => void;
 }) {
   const isEdit = !!loan;
+  const [direction, setDirection] = useState<LoanDirection>(
+    (loan?.direction ?? "lent") as LoanDirection
+  );
   const [borrower, setBorrower] = useState(loan?.borrower ?? "");
   const [amount, setAmount] = useState(loan ? String(loan.amount) : "");
   const [currency, setCurrency] = useState(loan?.currency ?? "INR");
@@ -331,6 +371,7 @@ function LoanFormModal({
     }
     setSaving(true);
     const payload = {
+      direction,
       borrower: borrower.trim(),
       amount: a,
       currency,
@@ -353,6 +394,7 @@ function LoanFormModal({
     if (isEdit) {
       onSaved({
         ...loan!,
+        direction: payload.direction,
         borrower: payload.borrower,
         amount: payload.amount,
         currency: payload.currency,
@@ -377,7 +419,7 @@ function LoanFormModal({
         onPaste={onPaste}
       >
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-nav">{isEdit ? "Edit loan" : "New loan"}</h3>
+          <h3 className="font-semibold text-nav">{isEdit ? "Edit entry" : "New entry"}</h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-nav text-lg leading-none"
@@ -387,8 +429,25 @@ function LoanFormModal({
           </button>
         </div>
 
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
+          {(["lent", "borrowed"] as LoanDirection[]).map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setDirection(d)}
+              className={`text-xs sm:text-sm px-3 py-1 rounded-md ${
+                direction === d ? "bg-white shadow-sm text-nav font-semibold" : "text-gray-500"
+              }`}
+            >
+              {d === "lent" ? "I lent" : "I borrowed"}
+            </button>
+          ))}
+        </div>
+
         <label className="block text-sm">
-          <span className="text-gray-600">Borrower</span>
+          <span className="text-gray-600">
+            {direction === "borrowed" ? "Lender" : "Borrower"}
+          </span>
           <input
             autoFocus
             value={borrower}
@@ -423,7 +482,9 @@ function LoanFormModal({
 
         <div className="grid grid-cols-2 gap-2">
           <label className="block text-sm">
-            <span className="text-gray-600">Lent on</span>
+            <span className="text-gray-600">
+              {direction === "borrowed" ? "Borrowed on" : "Lent on"}
+            </span>
             <input
               type="date"
               value={lentAt}

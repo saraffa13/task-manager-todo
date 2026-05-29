@@ -7,6 +7,7 @@ import { sanitizeScreenshot } from "@/lib/loans";
 function serialize(p: Record<string, unknown>) {
   return {
     _id: String(p._id),
+    direction: p.direction ?? "lent",
     borrower: p.borrower,
     amount: p.amount,
     currency: p.currency,
@@ -55,10 +56,12 @@ export async function POST(req: Request) {
     : "INR";
   const note = typeof body?.note === "string" ? body.note.trim().slice(0, 1000) : undefined;
   const screenshot = sanitizeScreenshot(body?.screenshot) ?? undefined;
+  const direction = body?.direction === "borrowed" ? "borrowed" : "lent";
 
   await dbConnect();
   const loan = await Loan.create({
     userId,
+    direction,
     borrower,
     amount,
     currency,

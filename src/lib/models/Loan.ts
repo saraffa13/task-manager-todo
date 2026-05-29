@@ -1,11 +1,13 @@
 import mongoose, { Schema, Model } from "mongoose";
 
 export type LoanStatus = "outstanding" | "repaid";
+export type LoanDirection = "lent" | "borrowed";
 
 export interface ILoan {
   _id: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
-  borrower: string;
+  direction: LoanDirection;
+  borrower: string; // counterparty: person lent-to (lent) or lender (borrowed)
   amount: number;
   currency: string;
   lentAt: Date;
@@ -19,6 +21,7 @@ export interface ILoan {
 
 const LoanSchema = new Schema<ILoan>({
   userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+  direction: { type: String, enum: ["lent", "borrowed"], default: "lent", index: true },
   borrower: { type: String, required: true },
   amount: { type: Number, required: true },
   currency: { type: String, default: "INR" },
